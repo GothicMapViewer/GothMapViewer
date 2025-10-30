@@ -5,17 +5,25 @@
 		<meta charset="utf-8">
 		<meta name="viewport" content="width=device-width, user-scalable=no, minimum-scale=1.0, maximum-scale=1.0">
 		<link type="text/css" rel="stylesheet" href="main.css">
+		<style>
+		p {text-align: center;}
+		</style>
 	</head>
 
 	<body>
-		<!-- <div id="info">
-			<a href="https://threejs.org" target="_blank" rel="noopener">three.js</a> - GLTFLoader<br />
-			Battle Damaged Sci-fi Helmet by
-			<a href="https://sketchfab.com/theblueturtle_" target="_blank" rel="noopener">theblueturtle_</a><br />
-			<a href="https://hdrihaven.com/hdri/?h=royal_esplanade" target="_blank" rel="noopener">Royal Esplanade</a> from <a href="https://hdrihaven.com/" target="_blank" rel="noopener">HDRI Haven</a>
-		</div> -->
 
-		<div id="instructions">Click to start</div>
+		<div id="info">
+			 <br/>
+			 <br/>
+			fly with WASD/ Ctrl / Space /hold shift to speed up + mouse
+		</div>
+
+		<div id="instructions">
+			<br/><br/><br/>
+			<font size="8"> 
+				<p>Click this text to start</p>
+				</font>
+		</div>
 
 		<!-- <script type="importmap">
 			{
@@ -24,6 +32,15 @@
 					"three/addons/": "./jsm/"
 				}
 			}
+		</script> -->
+
+		<!-- <script type="importmap">
+        {
+            "imports": {
+                "three": "https://unpkg.com/three@0.126.0/build/three.module.js",
+                "three/addons/": "./jsm/"
+            }
+        }
 		</script> -->
 
 		<script type="importmap">
@@ -53,40 +70,34 @@
 				document.body.appendChild( container );
 
 				camera = new THREE.PerspectiveCamera( 60, window.innerWidth / window.innerHeight, 0.25, 2000 );
-				camera.position.set( - 1.8, 0.6, 2.7 );
+				camera.position.set( - 1.8, 5.6, 2.7 );
 
 				scene = new THREE.Scene();
 
-				new HDRLoader()
-					.setPath( 'textures/' )
-					.load( 'royal_esplanade_1k.hdr', function ( texture ) {
+				const loader = new GLTFLoader().setPath( 'models/gltf/DamagedHelmet/glTF/' );
+				loader.load( 'workingG1World.gltf', async function ( gltf ) {
 
-						texture.mapping = THREE.EquirectangularReflectionMapping;
+					const model = gltf.scene;
 
-						scene.background = texture;
-						scene.environment = texture;
+					// wait until the model can be added to the scene without blocking due to shader compilation
 
-						render();
+					await renderer.compileAsync( model, camera, scene );
 
-						// model
+					scene.add( model );
+					scene.scale.set(.01*gltf.scene.scale.x, .01*gltf.scene.scale.y, .01 * gltf.scene.scale.z)
 
-						const loader = new GLTFLoader().setPath( 'models/gltf/DamagedHelmet/glTF/' );
-						loader.load( 'workingG1World.gltf', async function ( gltf ) {
+					render();
+	
+				} );
 
-							const model = gltf.scene;
+				const ambientLight = new THREE.AmbientLight( 0xffffff );
+				scene.add( ambientLight );
 
-							// wait until the model can be added to the scene without blocking due to shader compilation
+				scene.fog = new THREE.Fog( 0x745a4c, 50, 300 );
 
-							await renderer.compileAsync( model, camera, scene );
-
-							scene.add( model );
-							scene.scale.set(.01*gltf.scene.scale.x, .01*gltf.scene.scale.y, .01 * gltf.scene.scale.z)
-
-							//render();
-			
-						} );
-
-					} );
+				const directionalLight = new THREE.DirectionalLight( 0xffffff, 2.5 );
+				directionalLight.position.set( 1, 1, 0 ).normalize();
+				scene.add( directionalLight );
 
 				renderer = new THREE.WebGLRenderer( { antialias: true } );
 				renderer.setPixelRatio( window.devicePixelRatio );
@@ -122,7 +133,7 @@
 
 			// Movement variables
 			const move = { forward: false, backward: false, left: false, right: false, up: false, down: false };
-			const speed = 0.2;
+			var speed = 0.2;
 
 			document.addEventListener("keydown", (e) => {
 				switch (e.code) {
@@ -142,6 +153,9 @@
 					move.up = true;
 					break;
 				case "ShiftLeft":
+					speed = 1;
+					break;
+				case "ControlLeft":
 					move.down = true;
 					break;
 				}
@@ -165,10 +179,14 @@
 					move.up = false;
 					break;
 				case "ShiftLeft":
+					speed = 0.2;
+					break;
+				case "ControlLeft":
 					move.down = false;
 					break;
 				}
 			});
+			
 
 			// Animate
 			function animate() {
@@ -181,8 +199,13 @@
 				const forward = new THREE.Vector3();
 				const right = new THREE.Vector3();
 
+				var speedMult = 1;
+				if (move.forward) dir.add(forward);
+
 				camera.getWorldDirection(forward);
 				forward.normalize();
+
+				
 
 				right.crossVectors(camera.up, forward).normalize().negate();
 
